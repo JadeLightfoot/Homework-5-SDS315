@@ -1,0 +1,202 @@
+---
+title: "Homework 5 SDS315"
+author: "Jade Lightfoot (jsl3652)"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+---
+```{r echo=FALSE , message=FALSE}
+knitr::opts_chunk$set(fig.height=6, fig.width=6, warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60))
+
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(kableExtra))
+
+
+library(tidyverse)
+library(ggplot2)
+library(mosaic)
+library(dplyr)
+```
+
+Github Repo: https://github.com/JadeLightfoot/Homework-5-SDS315  
+
+
+
+# **Problem 1- Iron Bank** #
+
+```{r echo = FALSE}
+sim_SEC = do(100000)*nflip(n=2021, prob=0.024)
+sum_SEC <- sum(sim_SEC >= 70)/100000
+```
+
+```{r echo=FALSE}
+ggplot(sim_SEC, aes(x=nflip)) + geom_histogram(binwidth=1, fill= "lightblue", color= "skyblue") + labs(title = "Probabilty Distribution of Test Statistic", x= "Test Statisitic", y= "Frequency")
+```
+
+
+
+**NULL HYPOTHESIS**:
+  Over the long run, securities trades from the Iron Bank are flagged at the same 2.4% baseline rate as that of other traders. 
+  We are testing if the observed data that states 70 flagged trades out of 2021 are consistent with the SEC's null hypothesis. 
+
+**TEST STATISTIC**:
+  The test statsitic used to measure evidence against the null hypothesis is 70
+
+**P-VALUE**:
+  The p-value is approximately 0.00189
+
+**CONCLUSION**:
+  Based on the calculated test statistic of 0.00189 being less than 0.05, the null hypothesis proves that in light of the data to be statisitcally signinficant. Meaning that the null hypothesis should be rejected. So, the staememnt that the Iron Bank are flagged at the same 2.4% baseline rate as that of other traders is false.  
+
+
+***
+
+# **Problem 2- Health Inspections** #
+
+```{r echo=FALSE}
+sim_GB = do(100000)*nflip(n=50, prob = 0.03)
+sum_GB <- sum(sim_GB >= 8)/100000
+```
+
+```{r echo=FALSE}
+ggplot(sim_GB, aes(x=nflip)) + geom_histogram(binwidth=1, fill= "lightblue", color= "skyblue") + labs(title = "Probabilty Distribution of Test Statistic", x= "Test Statisitic", y= "Frequency")
+
+```
+
+
+
+**NULL HYPOTHESIS**:
+  The null hypothesis states that on average restrauants in the city are cited for health code violations at the same 3% baseline rate. 
+  We are testing if the observed data for 8 health code violations out of 50 remains the same.
+**TEST STATISTIC**:
+   The test statistic used to measure evidence against the null hypothesis is 8.
+
+**P-VALUE**:
+  The p-value is approximately 0.00016
+
+**CONCLUSION**:
+  Based on the calculated test statistic of 0.00016 being less than 0.05, the null hypothesis proves that in light of the data, to be statistically significant. Meaning that the null hypothesis should be rejected. So, the statement that Gourmet Bites is consistent with the Health Department's null hypothesis can be rejected.  
+
+
+***
+
+# **Problem 3- LLM watermarking** #
+
+
+### **PART A**:
+
+```{r echo= FALSE}
+letter <- read.csv("/Users/jadelightfoot/Downloads/letter_frequencies.csv")
+brown_txt <- readLines("/Users/jadelightfoot/Downloads/brown_sentences.txt")
+brown_sent <- tibble(Sentences = brown_txt)
+```
+
+
+```{r echo=FALSE}
+calculate_chi_squared = function(sentence, freq_table) {
+  # Ensure letter frequencies are normalized and sum to 1
+  freq_table$Probability = freq_table$Probability / sum(freq_table$Probability)
+  # Remove non-letters and convert to uppercase
+  clean_sentence = gsub("[^A-Za-z]", "", sentence)
+  clean_sentence = toupper(clean_sentence)
+  # Count the occurrences of each letter in the sentence
+  observed_counts = table(factor(strsplit(clean_sentence, "")[[1]], levels = freq_table$Letter))
+  # Calculate expected counts
+  total_letters = sum(observed_counts)
+  expected_counts = total_letters * freq_table$Probability
+  
+  return(list(obs_counts = observed_counts, exp_counts= expected_counts))
+}
+
+brown_null = numeric(nrow(brown_sent))
+
+for (i in 1:nrow(brown_sent)){
+  brown_sent_residuals <- calculate_chi_squared(brown_sent$Sentences[i], freq_table = letter)
+  
+  chi_squared_stat <- sum((brown_sent_residuals$obs_counts - brown_sent_residuals$exp_counts)^2 / brown_sent_residuals$exp_counts)
+  
+  brown_null[i] <- chi_squared_stat
+}
+```
+
+```{r echo=FALSE}
+browndata <- data.frame(chi_squared_stat = brown_null)
+
+ggplot(browndata, aes(x = chi_squared_stat)) +
+  geom_histogram(binwidth = 1, fill = "lightblue", color = "skyblue") +
+  labs(x = "Maximum Chi-squared statistic", y = "Frequency", 
+       title = "Distribution of Maximum Chi-squared Statistics")
+
+```
+
+
+
+
+### **PART B**:
+
+
+```{r echo= FALSE}
+ten_sentences <- c(
+  "She opened the book and started to read the first chapter, eagerly anticipating what might come next.",
+  "Despite the heavy rain, they decided to go for a long walk in the park, crossing the main avenue by the fountain in the center.",
+  "The museum’s new exhibit features ancient artifacts from various civilizations around the world.",
+  "He carefully examined the document, looking for any clues that might help solve the mystery.",
+  "The students gathered in the auditorium to listen to the guest speaker’s inspiring lecture.",
+  "Feeling vexed after an arduous and zany day at work, she hoped for a peaceful and quiet evening at home, cozying up after a quick dinner with some TV, or maybe a book on her upcoming visit to Auckland.",
+  "The chef demonstrated how to prepare a delicious meal using only locally sourced ingredients, focusing mainly on some excellent dinner recipes from Spain.",
+  "They watched the sunset from the hilltop, marveling at the beautiful array of colors in the sky.",
+  "The committee reviewed the proposal and provided many points of useful feedback to improve the project’s effectiveness.",
+  "Despite the challenges faced during the project, the team worked tirelessly to ensure its successful completion, resulting in a product that exceeded everyone’s expectations."
+)
+
+```
+
+
+```{r echo = FALSE}
+
+test <- tibble(Sentences = ten_sentences)
+
+test_dist = numeric(nrow(test))
+
+for(i in 1:nrow(test)){
+  test_residuals <- calculate_chi_squared(test$Sentences[i], freq_table = letter)
+  chi_stat <- sum((test_residuals$obs_count - test_residuals$exp_count)^2 /test_residuals$exp_count)
+  test_dist[i] <- chi_stat 
+}
+
+test$chi_stat <- test_dist
+
+test$p_val <- sapply(test_dist, function(chisquared) {
+  sum(brown_null >= chisquared) / length(brown_null)
+})
+
+test_pval<- test %>%
+  select(p_val)
+
+test_pval <- test_pval %>%
+  mutate(p_val = round(p_val,4))
+
+test_pval <- test_pval %>%
+  mutate(Sentence = c(1:10))
+
+test_pval <- test_pval %>%
+  select(Sentence, p_val)
+
+kable(test_pval, "html") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F) 
+
+
+
+
+```
+
+```{r echo=FALSE , eval=FALSE}
+#CODE FOR WHICH P-VALUE IS THE LOWEST
+which.min(test_pval$p_val)
+```
+
+
+The sentence with the lowest p-value is sentence number 6, "Feeling vexed after an arduous and zany day at work, she hoped for a peaceful and quiet evening at home, cozying up after a quick dinner with some TV, or maybe a book on her upcoming visit to Auckland.". 
+
+
